@@ -10,8 +10,8 @@ public class Refund {
 	private String deviceInfo;
 	private String outTradeNo;
 	private String outRefundNo;
-	private int totalFee;
-	private int refundFee;
+	private Integer totalFee;
+	private Integer refundFee;
 	private String refundFeeType;
 	private String opUserId;
 	private String refundAccount;
@@ -45,24 +45,24 @@ public class Refund {
 	public void setOutRefundNo(String outRefundNo) {
 		this.outRefundNo = outRefundNo;
 	}
-	public int getTotalFee() {
+	public Integer getTotalFee() {
 		return totalFee;
 	}
 	/**
 	 * 订单金额，单位分
 	 * @param totalFee
 	 */
-	public void setTotalFee(int totalFee) {
+	public void setTotalFee(Integer totalFee) {
 		this.totalFee = totalFee;
 	}
-	public int getRefundFee() {
+	public Integer getRefundFee() {
 		return refundFee;
 	}
 	/**
 	 * 退款金额，单位分
 	 * @param refundFee
 	 */
-	public void setRefundFee(int refundFee) {
+	public void setRefundFee(Integer refundFee) {
 		this.refundFee = refundFee;
 	}
 	public String getRefundFeeType() {
@@ -89,9 +89,9 @@ public class Refund {
 		return refundAccount;
 	}
 	/**
-	 * 退款资金来源
-	 *  REFUND_SOURCE_UNSETTLED_FUNDS---未结算资金退款（默认使用未结算资金退款）
-	 *  REFUND_SOURCE_RECHARGE_FUNDS---可用余额退款
+	 * 退款资金来源<br>
+	 *  REFUND_SOURCE_UNSETTLED_FUNDS---未结算资金退款（默认使用未结算资金退款）<br>
+	 *  REFUND_SOURCE_RECHARGE_FUNDS---可用余额退款<br>
 	 * @param refundAccount
 	 */
 	public void setRefundAccount(String refundAccount) {

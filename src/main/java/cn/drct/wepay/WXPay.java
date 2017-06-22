@@ -3,9 +3,18 @@ package cn.drct.wepay;
 import javax.net.ssl.*;
 
 import cn.drct.wepay.WXPayConstants.SignType;
+import cn.drct.wepay.entity.GroupRedpack;
 import cn.drct.wepay.entity.Order;
+import cn.drct.wepay.entity.Redpack;
+import cn.drct.wepay.entity.RedpackOrder;
+import cn.drct.wepay.entity.RedpackResult;
+import cn.drct.wepay.entity.Refund;
+import cn.drct.wepay.entity.RefundResult;
 import cn.drct.wepay.entity.UnifiedOrder;
 import cn.drct.wepay.entity.UnifiedOrderResult;
+import cn.drct.wepay.exception.MsgException;
+import cn.drct.wepay.exception.SignatureValidException;
+import cn.drct.wepay.exception.TradeException;
 import cn.drct.wepay.util.ReflectUtil;
 import cn.drct.wepay.util.WXPayUtil;
 
@@ -17,7 +26,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class WXPay {
-
+	private String UTF8 = "UTF-8";
+	private String RETURN_CODE = "return_code";
+	private String RESULT_CODE = "result_code";
 	private WXPayConfig config;
 
 	public WXPay(final WXPayConfig config) {
@@ -45,11 +56,10 @@ public class WXPay {
 	 *
 	 * @param reqData
 	 * @return
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
 	private Map<String, String> fillRequestData(Map<String, String> reqData)
-			throws Exception {
-		
+			throws MsgException, TradeException,MsgException,Exception {
 		reqData.put("appid", config.getAppID());
 		reqData.put("mch_id", config.getMchID());
 		reqData.put("nonce_str", WXPayUtil.generateNonceStr());
@@ -69,10 +79,10 @@ public class WXPay {
 	 * @param reqData
 	 *            向wxpay post的请求数据
 	 * @return 签名是否有效
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
 	private boolean isResponseSignatureValid(Map<String, String> reqData)
-			throws Exception {
+			throws MsgException, TradeException,MsgException,Exception {
 		// 返回数据的签名方式和请求中给定的签名方式是一致的
 		return WXPayUtil.isSignatureValid(reqData, this.config.getKey(),
 				config.getSignType());
@@ -84,10 +94,10 @@ public class WXPay {
 	 * @param reqData
 	 *            向wxpay post的请求数据
 	 * @return 签名是否有效
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
 	public boolean isPayResultNotifySignatureValid(Map<String, String> reqData)
-			throws Exception {
+			throws MsgException, TradeException,MsgException,Exception {
 		String signTypeInData = reqData.get(WXPayConstants.FIELD_SIGN_TYPE);
 		SignType signType;
 		if (signTypeInData == null) {
@@ -121,12 +131,11 @@ public class WXPay {
 	 * @param readTimeoutMs
 	 *            超时时间，单位是毫秒
 	 * @return API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
 	protected String requestWithoutCert(String strUrl,
 			Map<String, String> reqData, int connectTimeoutMs, int readTimeoutMs)
-			throws Exception {
-		String UTF8 = "UTF-8";
+			throws IOException,Exception {
 		String reqBody = WXPayUtil.mapToXml(reqData);
 		URL httpUrl = new URL(strUrl);
 		HttpURLConnection httpURLConnection = (HttpURLConnection) httpUrl
@@ -186,11 +195,10 @@ public class WXPay {
 	 * @param readTimeoutMs
 	 *            超时时间，单位是毫秒
 	 * @return API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
 	protected String requestWithCert(String strUrl, Map<String, String> reqData,
-			int connectTimeoutMs, int readTimeoutMs) throws Exception {
-		String UTF8 = "UTF-8";
+			int connectTimeoutMs, int readTimeoutMs) throws IOException,Exception {
 		String reqBody = WXPayUtil.mapToXml(reqData);
 		URL httpUrl = new URL(strUrl);
 
@@ -250,34 +258,47 @@ public class WXPay {
 	 * @param xmlStr
 	 *            API返回的XML格式数据
 	 * @return Map类型数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
-	public Map<String, String> processResponseXml(String xmlStr)
-			throws Exception {
-		String RETURN_CODE = "return_code";
+	protected Map<String, String> processResponseXml(String xmlStr)
+			throws MsgException, TradeException,MsgException,Exception{
 		String return_code;
 		Map<String, String> respData = WXPayUtil.xmlToMap(xmlStr);
 		if (respData.containsKey(RETURN_CODE)) {
 			return_code = respData.get(RETURN_CODE);
 		} else {
-			throw new Exception(String.format("No `return_code` in XML: %s",
+			throw new MsgException(String.format("No `return_code` in XML: %s",
 					xmlStr));
 		}
-
-		if (return_code.equals(WXPayConstants.FAIL)) {
-			return respData;
-		} else if (return_code.equals(WXPayConstants.SUCCESS)) {
+		if (return_code.equals(WXPayConstants.SUCCESS)) {
 			if (this.isResponseSignatureValid(respData)) {
-				return respData;
+				String result_code;
+				if (respData.containsKey(RESULT_CODE)) {
+					result_code = respData.get(RESULT_CODE);
+				} else {
+					throw new MsgException(String.format("No `result_code` in XML: %s",
+							xmlStr));
+				}
+				if(result_code.equals(WXPayConstants.SUCCESS)){
+					return respData;
+				}else{
+					throw new TradeException(respData.get("err_code"),respData.get("err_code_des"));
+				}
+				
 			} else {
-				throw new Exception(String.format(
+				throw new SignatureValidException(String.format(
 						"Invalid sign value in XML: %s", xmlStr));
 			}
 		} else {
-			throw new Exception(String.format(
+			throw new MsgException(String.format(
 					"return_code value %s is invalid in XML: %s", return_code,
 					xmlStr));
 		}
+	}
+	
+	public <T> T processResponseXml(String xmlStr,Class<T>clazz)
+			throws MsgException, TradeException,MsgException,Exception {
+		return ReflectUtil.toObject(this.processResponseXml(xmlStr),clazz);
 	}
 
 
@@ -288,10 +309,10 @@ public class WXPay {
 	 * @param order
 	 *            向wxpay post的请求数据
 	 * @return API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
 	public UnifiedOrderResult unifiedOrder(UnifiedOrder order)
-			throws Exception {
+			throws MsgException, TradeException,MsgException,Exception {
 		return this.unifiedOrder(order, config.getHttpConnectTimeoutMs(),
 				this.config.getHttpReadTimeoutMs());
 	}
@@ -307,10 +328,10 @@ public class WXPay {
 	 * @param readTimeoutMs
 	 *            读超时时间，单位是毫秒
 	 * @return API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
 	public UnifiedOrderResult unifiedOrder(UnifiedOrder order,
-			int connectTimeoutMs, int readTimeoutMs) throws Exception {
+			int connectTimeoutMs, int readTimeoutMs) throws MsgException, TradeException,MsgException,Exception {
 		String url;
 		if (config.isUseSandbox()) {
 			url = WXPayConstants.SANDBOX_UNIFIEDORDER_URL;
@@ -319,7 +340,7 @@ public class WXPay {
 		}
 		String respXml = this.requestWithoutCert(url,
 				this.fillRequestData(ReflectUtil.toMap(order)), connectTimeoutMs, readTimeoutMs);
-		return ReflectUtil.toObject(this.processResponseXml(respXml), UnifiedOrderResult.class);
+		return processResponseXml(respXml,UnifiedOrderResult.class);
 	}
 
 	/**
@@ -329,10 +350,10 @@ public class WXPay {
 	 * @param outTradeNo
 	 *           商户订单号
 	 * @return API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
 	public Order orderQuery(String outTradeNo)
-			throws Exception {
+			throws MsgException, TradeException,MsgException,Exception {
 		return this.orderQuery(outTradeNo, config.getHttpConnectTimeoutMs(),
 				this.config.getHttpReadTimeoutMs());
 	}
@@ -348,10 +369,10 @@ public class WXPay {
 	 * @param readTimeoutMs
 	 *            读超时时间，单位是毫秒
 	 * @return API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
 	public Order orderQuery(String outTradeNo,
-			int connectTimeoutMs, int readTimeoutMs) throws Exception {
+			int connectTimeoutMs, int readTimeoutMs) throws MsgException, TradeException,MsgException,Exception {
 		Map<String, String> reqData = new HashMap<String, String>();
 		reqData.put("out_trade_no", outTradeNo);
 		String url;
@@ -362,7 +383,7 @@ public class WXPay {
 		}
 		String respXml = this.requestWithoutCert(url,
 				this.fillRequestData(reqData), connectTimeoutMs, readTimeoutMs);
-		return ReflectUtil.toObject(this.processResponseXml(respXml),Order.class);
+		return processResponseXml(respXml,Order.class);
 	}
 
 	
@@ -373,10 +394,10 @@ public class WXPay {
 	 * @param outTradeNo
 	 *            商户订单号
 	 * @return API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
 	public boolean closeOrder(String outTradeNo)
-			throws Exception {
+			throws MsgException, TradeException,MsgException,Exception {
 		return this.closeOrder(outTradeNo, config.getHttpConnectTimeoutMs(),
 				this.config.getHttpReadTimeoutMs());
 	}
@@ -392,10 +413,10 @@ public class WXPay {
 	 * @param readTimeoutMs
 	 *            读超时时间，单位是毫秒
 	 * @return API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
 	public boolean closeOrder(String outTradeNo,
-			int connectTimeoutMs, int readTimeoutMs) throws Exception {
+			int connectTimeoutMs, int readTimeoutMs) throws MsgException, TradeException,MsgException,Exception {
 		String url;
 		Map<String, String> reqData = new HashMap<String, String>();
 		reqData.put("out_trade_no", outTradeNo);
@@ -413,10 +434,6 @@ public class WXPay {
 				return true;
 			}
 		}
-		String err_code = result.get("err_code");
-		if(err_code!=null){
-			throw new Exception(err_code);
-		}
 		return false;
 	}
 
@@ -424,14 +441,14 @@ public class WXPay {
 	 * 作用：申请退款<br>
 	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付
 	 * 
-	 * @param reqData
+	 * @param refund
 	 *            向wxpay post的请求数据
 	 * @return API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
-	public Map<String, String> refund(Map<String, String> reqData)
-			throws Exception {
-		return this.refund(reqData, this.config.getHttpConnectTimeoutMs(),
+	public RefundResult refund(Refund refund)
+			throws MsgException, TradeException,MsgException,Exception {
+		return this.refund(refund, this.config.getHttpConnectTimeoutMs(),
 				this.config.getHttpReadTimeoutMs());
 	}
 
@@ -440,17 +457,17 @@ public class WXPay {
 	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付<br>
 	 * 其他：需要证书
 	 * 
-	 * @param reqData
+	 * @param refund
 	 *            向wxpay post的请求数据
 	 * @param connectTimeoutMs
 	 *            连接超时时间，单位是毫秒
 	 * @param readTimeoutMs
 	 *            读超时时间，单位是毫秒
 	 * @return API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
-	public Map<String, String> refund(Map<String, String> reqData,
-			int connectTimeoutMs, int readTimeoutMs) throws Exception {
+	public RefundResult refund(Refund refund,
+			int connectTimeoutMs, int readTimeoutMs) throws MsgException, TradeException,MsgException,Exception {
 		String url;
 		if (config.isUseSandbox()) {
 			url = WXPayConstants.SANDBOX_REFUND_URL;
@@ -458,148 +475,22 @@ public class WXPay {
 			url = WXPayConstants.REFUND_URL;
 		}
 		String respXml = this.requestWithCert(url,
-				this.fillRequestData(reqData), connectTimeoutMs, readTimeoutMs);
-		return this.processResponseXml(respXml);
+				this.fillRequestData(ReflectUtil.toMap(refund)), connectTimeoutMs, readTimeoutMs);
+		return processResponseXml(respXml,RefundResult.class);
 	}
 	
-	/**
-	 * 作用：微信红包<br>
-	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付
-	 * 
-	 * @param reqData
-	 *            向wxpay post的请求数据
-	 * @return API返回数据
-	 * @throws Exception
-	 */
-	public Map<String, String> redpack(Map<String, String> reqData)
-			throws Exception {
-		return this.redpack(reqData, this.config.getHttpConnectTimeoutMs(),
-				this.config.getHttpReadTimeoutMs());
-	}
-
-	/**
-	 * 作用：微信红包<br>
-	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付<br>
-	 * 其他：需要证书
-	 * 
-	 * @param reqData
-	 *            向wxpay post的请求数据
-	 * @param connectTimeoutMs
-	 *            连接超时时间，单位是毫秒
-	 * @param readTimeoutMs
-	 *            读超时时间，单位是毫秒
-	 * @return API返回数据
-	 * @throws Exception
-	 */
-	public Map<String, String> redpack(Map<String, String> reqData,
-			int connectTimeoutMs, int readTimeoutMs) throws Exception {
-		String url;
-		if (config.isUseSandbox()) {
-			url = WXPayConstants.SANDBOX_REDPACK_URL;
-		} else {
-			url = WXPayConstants.REDPACK_URL;
-		}
-		String respXml = this.requestWithCert(url,
-				this.fillRequestData(reqData), connectTimeoutMs, readTimeoutMs);
-		return this.processResponseXml(respXml);
-	}
-	
-	/**
-	 * 作用：微信红包<br>
-	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付
-	 * 
-	 * @param reqData
-	 *            向wxpay post的请求数据
-	 * @return API返回数据
-	 * @throws Exception
-	 */
-	public Map<String, String> groupRedpack(Map<String, String> reqData)
-			throws Exception {
-		return this.groupRedpack(reqData, this.config.getHttpConnectTimeoutMs(),
-				this.config.getHttpReadTimeoutMs());
-	}
-
-	/**
-	 * 作用：微信红包<br>
-	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付<br>
-	 * 其他：需要证书
-	 * 
-	 * @param reqData
-	 *            向wxpay post的请求数据
-	 * @param connectTimeoutMs
-	 *            连接超时时间，单位是毫秒
-	 * @param readTimeoutMs
-	 *            读超时时间，单位是毫秒
-	 * @return API返回数据
-	 * @throws Exception
-	 */
-	public Map<String, String> groupRedpack(Map<String, String> reqData,
-			int connectTimeoutMs, int readTimeoutMs) throws Exception {
-		String url;
-		if (config.isUseSandbox()) {
-			url = WXPayConstants.SANDBOX_GROUPREDPACK_URL;
-		} else {
-			url = WXPayConstants.GROUPREDPACK_URL;
-		}
-		String respXml = this.requestWithCert(url,
-				this.fillRequestData(reqData), connectTimeoutMs, readTimeoutMs);
-		return this.processResponseXml(respXml);
-	}
-	
-	/**
-	 * 作用：微信红包查询<br>
-	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付
-	 * 
-	 * @param reqData
-	 *            向wxpay post的请求数据
-	 * @return API返回数据
-	 * @throws Exception
-	 */
-	public Map<String, String> redpackQuery(Map<String, String> reqData)
-			throws Exception {
-		return this.redpackQuery(reqData, this.config.getHttpConnectTimeoutMs(),
-				this.config.getHttpReadTimeoutMs());
-	}
-
-	/**
-	 * 作用：微信红包查询<br>
-	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付<br>
-	 * 其他：需要证书
-	 * 
-	 * @param reqData
-	 *            向wxpay post的请求数据
-	 * @param connectTimeoutMs
-	 *            连接超时时间，单位是毫秒
-	 * @param readTimeoutMs
-	 *            读超时时间，单位是毫秒
-	 * @return API返回数据
-	 * @throws Exception
-	 */
-	public Map<String, String> redpackQuery(Map<String, String> reqData,
-			int connectTimeoutMs, int readTimeoutMs) throws Exception {
-		String url;
-		if (config.isUseSandbox()) {
-			url = WXPayConstants.SANDBOX_REDPACKQUERY_URL;
-		} else {
-			url = WXPayConstants.REDPACKQUERY_URL;
-		}
-		String respXml = this.requestWithCert(url,
-				this.fillRequestData(reqData), connectTimeoutMs, readTimeoutMs);
-		return this.processResponseXml(respXml);
-	}
-
 	/**
 	 * 作用：退款查询<br>
 	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付
 	 * 
-	 * @param reqData
+	 * @param outRefundNo
 	 *            向wxpay post的请求数据
 	 * @return API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
-	public Map<String, String> refundQuery(Map<String, String> reqData)
-			throws Exception {
-		return this.refundQuery(reqData, this.config.getHttpConnectTimeoutMs(),
+	public Map<String, String> refundQuery(String outRefundNo)
+			throws MsgException, TradeException,MsgException,Exception {
+		return this.refundQuery(outRefundNo, this.config.getHttpConnectTimeoutMs(),
 				this.config.getHttpReadTimeoutMs());
 	}
 
@@ -607,18 +498,20 @@ public class WXPay {
 	 * 作用：退款查询<br>
 	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付
 	 * 
-	 * @param reqData
+	 * @param outRefundNo
 	 *            向wxpay post的请求数据
 	 * @param connectTimeoutMs
 	 *            连接超时时间，单位是毫秒
 	 * @param readTimeoutMs
 	 *            读超时时间，单位是毫秒
 	 * @return API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
-	public Map<String, String> refundQuery(Map<String, String> reqData,
-			int connectTimeoutMs, int readTimeoutMs) throws Exception {
+	public Map<String, String> refundQuery(String outRefundNo,
+			int connectTimeoutMs, int readTimeoutMs) throws MsgException, TradeException,MsgException,Exception {
 		String url;
+		Map<String, String> reqData = new HashMap<String, String>();
+		reqData.put("out_refund_no", outRefundNo);
 		if (config.isUseSandbox()) {
 			url = WXPayConstants.SANDBOX_REFUNDQUERY_URL;
 		} else {
@@ -629,6 +522,136 @@ public class WXPay {
 		return this.processResponseXml(respXml);
 	}
 
+	
+	/**
+	 * 作用：微信红包<br>
+	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付
+	 * 
+	 * @param redpack
+	 *            向wxpay post的请求数据
+	 * @return API返回数据
+	 * @throws MsgException, TradeException,MsgException,Exception
+	 */
+	public RedpackResult redpack(Redpack redpack)
+			throws MsgException, TradeException,MsgException,Exception {
+		return this.redpack(redpack, this.config.getHttpConnectTimeoutMs(),
+				this.config.getHttpReadTimeoutMs());
+	}
+
+	/**
+	 * 作用：微信红包<br>
+	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付<br>
+	 * 其他：需要证书
+	 * 
+	 * @param redpack
+	 *            向wxpay post的请求数据
+	 * @param connectTimeoutMs
+	 *            连接超时时间，单位是毫秒
+	 * @param readTimeoutMs
+	 *            读超时时间，单位是毫秒
+	 * @return API返回数据
+	 * @throws MsgException, TradeException,MsgException,Exception
+	 */
+	public RedpackResult redpack(Redpack redpack,
+			int connectTimeoutMs, int readTimeoutMs) throws MsgException, TradeException,MsgException,Exception {
+		String url;
+		if (config.isUseSandbox()) {
+			url = WXPayConstants.SANDBOX_REDPACK_URL;
+		} else {
+			url = WXPayConstants.REDPACK_URL;
+		}
+		String respXml = this.requestWithCert(url,
+				this.fillRequestData(ReflectUtil.toMap(redpack)), connectTimeoutMs, readTimeoutMs);
+		return processResponseXml(respXml,RedpackResult.class);
+	}
+	
+	/**
+	 * 作用：发送微信分裂红包<br>
+	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付
+	 * 
+	 * @param groupRedpack
+	 *            向wxpay post的请求数据
+	 * @return API返回数据
+	 * @throws MsgException, TradeException,MsgException,Exception
+	 */
+	public RedpackResult groupRedpack(GroupRedpack groupRedpack)
+			throws MsgException, TradeException,MsgException,Exception {
+		return this.groupRedpack(groupRedpack, this.config.getHttpConnectTimeoutMs(),
+				this.config.getHttpReadTimeoutMs());
+	}
+
+	/**
+	 * 作用：发送微信分裂红包<br>
+	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付<br>
+	 * 其他：需要证书
+	 * 
+	 * @param groupRedpack
+	 *            向wxpay post的请求数据
+	 * @param connectTimeoutMs
+	 *            连接超时时间，单位是毫秒
+	 * @param readTimeoutMs
+	 *            读超时时间，单位是毫秒
+	 * @return API返回数据
+	 * @throws MsgException, TradeException,MsgException,Exception
+	 */
+	public RedpackResult groupRedpack(GroupRedpack groupRedpack,
+			int connectTimeoutMs, int readTimeoutMs) throws MsgException, TradeException,MsgException,Exception {
+		String url;
+		if (config.isUseSandbox()) {
+			url = WXPayConstants.SANDBOX_GROUPREDPACK_URL;
+		} else {
+			url = WXPayConstants.GROUPREDPACK_URL;
+		}
+		String respXml = this.requestWithCert(url,
+				this.fillRequestData(ReflectUtil.toMap(groupRedpack)), connectTimeoutMs, readTimeoutMs);
+		return processResponseXml(respXml,RedpackResult.class);
+	}
+	
+	/**
+	 * 作用：查询微信红包<br>
+	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付
+	 * 
+	 * @param mchBillno
+	 *            向wxpay post的请求数据
+	 * @return API返回数据
+	 * @throws MsgException, TradeException,MsgException,Exception
+	 */
+	public RedpackOrder redpackQuery(String mchBillno)
+			throws MsgException, TradeException,MsgException,Exception {
+		return this.redpackQuery(mchBillno, this.config.getHttpConnectTimeoutMs(),
+				this.config.getHttpReadTimeoutMs());
+	}
+
+	/**
+	 * 作用：微信红包查询<br>
+	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付<br>
+	 * 其他：需要证书
+	 * 
+	 * @param mchBillno
+	 *            向wxpay post的请求数据
+	 * @param connectTimeoutMs
+	 *            连接超时时间，单位是毫秒
+	 * @param readTimeoutMs
+	 *            读超时时间，单位是毫秒
+	 * @return API返回数据
+	 * @throws MsgException, TradeException,MsgException,Exception
+	 */
+	public RedpackOrder redpackQuery(String mchBillno,
+			int connectTimeoutMs, int readTimeoutMs) throws MsgException, TradeException,MsgException,Exception {
+		String url;
+		Map<String, String> reqData = new HashMap<String, String>();
+		reqData.put("mch_billno", mchBillno);
+		if (config.isUseSandbox()) {
+			url = WXPayConstants.SANDBOX_REDPACKQUERY_URL;
+		} else {
+			url = WXPayConstants.REDPACKQUERY_URL;
+		}
+		String respXml = this.requestWithCert(url,
+				this.fillRequestData(reqData), connectTimeoutMs, readTimeoutMs);
+		return processResponseXml(respXml,RedpackOrder.class);
+	}
+
+	
 	/**
 	 * 作用：对账单下载（成功时返回对账单数据，失败时返回XML格式数据）<br>
 	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付
@@ -636,10 +659,10 @@ public class WXPay {
 	 * @param reqData
 	 *            向wxpay post的请求数据
 	 * @return API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
 	public Map<String, String> downloadBill(Map<String, String> reqData)
-			throws Exception {
+			throws MsgException, TradeException,MsgException,Exception {
 		return this.downloadBill(reqData,
 				this.config.getHttpConnectTimeoutMs(),
 				this.config.getHttpReadTimeoutMs());
@@ -658,10 +681,10 @@ public class WXPay {
 	 * @param readTimeoutMs
 	 *            读超时时间，单位是毫秒
 	 * @return 经过封装的API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
 	public Map<String, String> downloadBill(Map<String, String> reqData,
-			int connectTimeoutMs, int readTimeoutMs) throws Exception {
+			int connectTimeoutMs, int readTimeoutMs) throws MsgException, TradeException,MsgException,Exception {
 		String url;
 		if (config.isUseSandbox()) {
 			url = WXPayConstants.SANDBOX_DOWNLOADBILL_URL;
@@ -692,10 +715,10 @@ public class WXPay {
 	 * @param reqData
 	 *            向wxpay post的请求数据
 	 * @return API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
 	public Map<String, String> report(Map<String, String> reqData)
-			throws Exception {
+			throws MsgException, TradeException,MsgException,Exception {
 		return this.report(reqData, this.config.getHttpConnectTimeoutMs(),
 				this.config.getHttpReadTimeoutMs());
 	}
@@ -711,10 +734,10 @@ public class WXPay {
 	 * @param readTimeoutMs
 	 *            读超时时间，单位是毫秒
 	 * @return API返回数据
-	 * @throws Exception
+	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
 	public Map<String, String> report(Map<String, String> reqData,
-			int connectTimeoutMs, int readTimeoutMs) throws Exception {
+			int connectTimeoutMs, int readTimeoutMs) throws MsgException, TradeException,MsgException,Exception {
 		String url;
 		if (config.isUseSandbox()) {
 			url = WXPayConstants.SANDBOX_REPORT_URL;

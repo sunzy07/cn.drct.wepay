@@ -1,4 +1,4 @@
-package cn.drct.wepay.base;
+package cn.drct.wepay.util;
 
 import static org.junit.Assert.*;
 
@@ -7,7 +7,6 @@ import java.util.Map;
 import org.junit.Test;
 
 import cn.drct.wepay.entity.UnifiedOrder;
-import cn.drct.wepay.util.ReflectUtil;
 
 public class ReflectUtilTest {
 

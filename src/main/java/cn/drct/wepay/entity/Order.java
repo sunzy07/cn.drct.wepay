@@ -7,10 +7,10 @@ public class Order {
 	private String tradeType;
 	private String tradeState;
 	private String bankType;
-	private int totalFee;
-	private int settlementTotalFee;
+	private Integer totalFee;
+	private Integer settlementTotalFee;
 	private String feeType;
-	private int cashFee;
+	private Integer cashFee;
 	private String cashFeeType;
 	private String transactionId;
 	private String outTradeNo;
@@ -59,12 +59,12 @@ public class Order {
 		this.tradeType = tradeType;
 	}
 	/**
-	 * 交易状态 SUCCESS—支付成功
-	 * REFUND—转入退款
-	 * NOTPAY—未支付
-	 * CLOSED—已关闭
-	 * REVOKED—已撤销（刷卡支付）
-	 * USERPAYING--用户支付中
+	 * 交易状态 SUCCESS—支付成功<br>
+	 * REFUND—转入退款<br>
+	 * NOTPAY—未支付<br>
+	 * CLOSED—已关闭<br>
+	 * REVOKED—已撤销（刷卡支付）<br>
+	 * USERPAYING--用户支付中<br>
 	 * PAYERROR--支付失败(其他原因，如银行返回失败)
 	 * @return
 	 */
@@ -88,20 +88,20 @@ public class Order {
 	 * 订单金额
 	 * @return
 	 */
-	public int getTotalFee() {
+	public Integer getTotalFee() {
 		return totalFee;
 	}
-	public void setTotalFee(int totalFee) {
+	public void setTotalFee(Integer totalFee) {
 		this.totalFee = totalFee;
 	}
 	/**
 	 * 应结订单金额
 	 * @return
 	 */
-	public int getSettlementTotalFee() {
+	public Integer getSettlementTotalFee() {
 		return settlementTotalFee;
 	}
-	public void setSettlementTotalFee(int settlementTotalFee) {
+	public void setSettlementTotalFee(Integer settlementTotalFee) {
 		this.settlementTotalFee = settlementTotalFee;
 	}
 	/**
@@ -118,10 +118,10 @@ public class Order {
 	 * 现金支付金额
 	 * @return
 	 */
-	public int getCashFee() {
+	public Integer getCashFee() {
 		return cashFee;
 	}
-	public void setCashFee(int cashFee) {
+	public void setCashFee(Integer cashFee) {
 		this.cashFee = cashFee;
 	}
 	/**
