@@ -42,6 +42,8 @@ public class WXPayConstants {
     public static final String SANDBOX_GROUPREDPACK_URL = SANDBOX_BASE_URL+"mmpaymkttransfers/sendgroupredpack";
     public static final String SANDBOX_REDPACKQUERY_URL = SANDBOX_BASE_URL+"mmpaymkttransfers/gethbinfo";
     
+    public static final String SANDBOX_SignKey_URL = SANDBOX_BASE_URL+"pay/getsignkey";
+    
 
 
 }

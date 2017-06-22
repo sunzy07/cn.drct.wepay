@@ -45,6 +45,9 @@ public class WXPay {
 			sslContext.init(kmf.getKeyManagers(), null, new SecureRandom());
 			HttpsURLConnection.setDefaultSSLSocketFactory(sslContext
 					.getSocketFactory());
+			if(config.isUseSandbox()){
+				config.setKey(getSandBoxSignKey());
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -747,6 +750,18 @@ public class WXPay {
 		String respXml = this.requestWithoutCert(url,
 				this.fillRequestData(reqData), connectTimeoutMs, readTimeoutMs);
 		return WXPayUtil.xmlToMap(respXml);
+	}
+	
+	public String getSandBoxSignKey() throws MsgException, TradeException,MsgException,Exception{
+		Map<String, String> reqData = new HashMap<String, String>();
+		reqData.put("mch_id", config.getMchID());
+		reqData.put("nonce_str", WXPayUtil.generateNonceStr());
+		reqData.put("sign", WXPayUtil.generateSignature(reqData,config.getKey(), WXPayConstants.SignType.MD5));
+		String respXml = this.requestWithoutCert(WXPayConstants.SANDBOX_SignKey_URL,
+				this.fillRequestData(reqData), this.config.getHttpConnectTimeoutMs(),
+				this.config.getHttpReadTimeoutMs());
+		Map<String, String> respData = WXPayUtil.xmlToMap(respXml);
+		return respData.get("sandbox_signkey");
 	}
 
 } // end class

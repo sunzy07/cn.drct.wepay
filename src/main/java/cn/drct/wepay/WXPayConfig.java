@@ -28,6 +28,9 @@ public interface WXPayConfig {
      * @return API密钥
      */
     public String getKey();
+    
+
+    public void setKey(String key);
 
 
     /**
