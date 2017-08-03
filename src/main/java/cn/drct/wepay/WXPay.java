@@ -75,6 +75,7 @@ public class WXPay {
 				config.getKey(), config.getSignType()));
 		return reqData;
 	}
+	
 
 	/**
 	 * 判断xml数据的sign是否有效，必须包含sign字段，否则返回false。
@@ -762,6 +763,17 @@ public class WXPay {
 				this.config.getHttpReadTimeoutMs());
 		Map<String, String> respData = WXPayUtil.xmlToMap(respXml);
 		return respData.get("sandbox_signkey");
+	}
+	
+	
+	public String generateWeappPaySign(String prepay_id,String nonceStr,long timestamp) throws Exception{
+		Map<String, String> reqData =new  HashMap<String, String>();
+		reqData.put("appId", config.getAppID());
+		reqData.put("package", "prepay_id="+prepay_id);
+		reqData.put("nonceStr", nonceStr);
+		reqData.put("timeStamp",timestamp+"");
+		reqData.put("signType","MD5");
+		return WXPayUtil.generateSignature(reqData,config.getKey(), WXPayConstants.SignType.MD5);
 	}
 
 } // end class
