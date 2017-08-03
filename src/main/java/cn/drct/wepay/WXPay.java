@@ -76,6 +76,25 @@ public class WXPay {
 		return reqData;
 	}
 	
+	
+	/**
+	 * 向 Map 中添加 wxappid、mch_id、nonce_str、sign_type、sign <br>
+	 * 该函数适用于商户适用于统一下单等接口，不适用于红包、代金券接口
+	 *
+	 * @param reqData
+	 * @return
+	 * @throws MsgException, TradeException,MsgException,Exception
+	 */
+	private Map<String, String> fillRedpackRequestData(Map<String, String> reqData)
+			throws MsgException, TradeException,MsgException,Exception {
+		reqData.put("wxappid", config.getAppID());
+		reqData.put("mch_id", config.getMchID());
+		reqData.put("nonce_str", WXPayUtil.generateNonceStr());
+		reqData.put("sign", WXPayUtil.generateSignature(reqData,
+				config.getKey(), config.getSignType()));
+		return reqData;
+	}
+	
 
 	/**
 	 * 判断xml数据的sign是否有效，必须包含sign字段，否则返回false。
@@ -565,7 +584,7 @@ public class WXPay {
 			url = WXPayConstants.REDPACK_URL;
 		}
 		String respXml = this.requestWithCert(url,
-				this.fillRequestData(ReflectUtil.toMap(redpack)), connectTimeoutMs, readTimeoutMs);
+				this.fillRedpackRequestData(ReflectUtil.toMap(redpack)), connectTimeoutMs, readTimeoutMs);
 		return processResponseXml(respXml,RedpackResult.class);
 	}
 	
@@ -607,7 +626,7 @@ public class WXPay {
 			url = WXPayConstants.GROUPREDPACK_URL;
 		}
 		String respXml = this.requestWithCert(url,
-				this.fillRequestData(ReflectUtil.toMap(groupRedpack)), connectTimeoutMs, readTimeoutMs);
+				this.fillRedpackRequestData(ReflectUtil.toMap(groupRedpack)), connectTimeoutMs, readTimeoutMs);
 		return processResponseXml(respXml,RedpackResult.class);
 	}
 	
