@@ -5,7 +5,7 @@ public class Transfers {
 	private String openid;
 	private String checkName;
 	private String reUserName;
-	private String amount;
+	private Integer amount;
 	private String desc;
 	private String spbillCreateIp;
 	
@@ -48,14 +48,14 @@ public class Transfers {
 	public void setReUserName(String reUserName) {
 		this.reUserName = reUserName;
 	}
-	public String getAmount() {
+	public Integer getAmount() {
 		return amount;
 	}
 	/**
 	 * 企业付款金额，单位为分
 	 * @param amount
 	 */
-	public void setAmount(String amount) {
+	public void setAmount(Integer amount) {
 		this.amount = amount;
 	}
 	public String getDesc() {

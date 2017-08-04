@@ -15,18 +15,19 @@ public class TransfersOrder {
 	public void setPartnerTradeNo(String partnerTradeNo) {
 		this.partnerTradeNo = partnerTradeNo;
 	}
-	public String getStatus() {
-		return status;
-	}
-	public void setStatus(String status) {
-		this.status = status;
-	}
 	/**
 	 * SUCCESS:转账成功
 	 * FAILED:转账失败
 	 * PROCESSING:处理中
 	 * @return
 	 */
+	public String getStatus() {
+		return status;
+	}
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
 	public String getReason() {
 		return reason;
 	}
@@ -82,6 +83,14 @@ public class TransfersOrder {
 	}
 	public void setDesc(String desc) {
 		this.desc = desc;
+	}
+	@Override
+	public String toString() {
+		return "TransfersOrder [partnerTradeNo=" + partnerTradeNo + ", status="
+				+ status + ", reason=" + reason + ", openid=" + openid
+				+ ", transferName=" + transferName + ", paymentAmount="
+				+ paymentAmount + ", transferTime=" + transferTime + ", desc="
+				+ desc + "]";
 	}
 	
 	

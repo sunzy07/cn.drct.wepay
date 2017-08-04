@@ -110,7 +110,7 @@ public class WXPay {
 	private Map<String, String> fillTransfersRequestData(Map<String, String> reqData)
 			throws MsgException, TradeException,MsgException,Exception {
 		reqData.put("mch_appid", config.getAppID());
-		reqData.put("mch_id", config.getMchID());
+		reqData.put("mchid", config.getMchID());
 		reqData.put("nonce_str", WXPayUtil.generateNonceStr());
 		reqData.put("sign", WXPayUtil.generateSignature(reqData,
 				config.getKey(), config.getSignType()));
@@ -323,7 +323,7 @@ public class WXPay {
 	 * @return Map类型数据
 	 * @throws MsgException, TradeException,MsgException,Exception
 	 */
-	protected Map<String, String> processResponseXml(String xmlStr)
+	protected Map<String, String> processResponseXml(String xmlStr,boolean signatureValid)
 			throws MsgException, TradeException,MsgException,Exception{
 		String return_code;
 		Map<String, String> respData = WXPayUtil.xmlToMap(xmlStr);
@@ -334,24 +334,24 @@ public class WXPay {
 					xmlStr));
 		}
 		if (return_code.equals(WXPayConstants.SUCCESS)) {
-			if (this.isResponseSignatureValid(respData)) {
-				String result_code;
-				if (respData.containsKey(RESULT_CODE)) {
-					result_code = respData.get(RESULT_CODE);
-				} else {
-					throw new MsgException(String.format("No `result_code` in XML: %s",
-							xmlStr));
-				}
-				if(result_code.equals(WXPayConstants.SUCCESS)){
-					return respData;
-				}else{
-					throw new TradeException(respData.get("err_code"),respData.get("err_code_des"));
-				}
-				
+			String result_code;
+			if (respData.containsKey(RESULT_CODE)) {
+				result_code = respData.get(RESULT_CODE);
 			} else {
-				throw new SignatureValidException(String.format(
-						"Invalid sign value in XML: %s", xmlStr));
+				throw new MsgException(String.format("No `result_code` in XML: %s",
+						xmlStr));
 			}
+			if(result_code.equals(WXPayConstants.SUCCESS)){
+				if (signatureValid&&!this.isResponseSignatureValid(respData)) {
+					throw new SignatureValidException(String.format(
+							"Invalid sign value in XML: %s", xmlStr));
+					
+				} 
+				return respData;
+			}else{
+				throw new TradeException(respData.get("err_code"),respData.get("err_code_des"));
+			}
+			
 		} else {
 			throw new MsgException(String.format(
 					"return_code value %s is invalid in XML: %s", return_code,
@@ -359,9 +359,15 @@ public class WXPay {
 		}
 	}
 	
+	
 	public <T> T processResponseXml(String xmlStr,Class<T>clazz)
 			throws MsgException, TradeException,MsgException,Exception {
-		return ReflectUtil.toObject(this.processResponseXml(xmlStr),clazz);
+		return  processResponseXml(xmlStr, clazz,true);
+	}
+	
+	public <T> T processResponseXml(String xmlStr,Class<T>clazz,boolean signatureValid)
+			throws MsgException, TradeException,MsgException,Exception {
+		return ReflectUtil.toObject(this.processResponseXml(xmlStr,signatureValid),clazz);
 	}
 
 
@@ -490,7 +496,7 @@ public class WXPay {
 		}
 		String respXml = this.requestWithoutCert(url,
 				this.fillRequestData(reqData), connectTimeoutMs, readTimeoutMs);
-		Map<String, String> result = this.processResponseXml(respXml);
+		Map<String, String> result = this.processResponseXml(respXml,true);
 		String resultCode = result.get("result_code");
 		if(resultCode!=null){
 			if(resultCode.equals("SUCCESS")){
@@ -582,7 +588,7 @@ public class WXPay {
 		}
 		String respXml = this.requestWithoutCert(url,
 				this.fillRequestData(reqData), connectTimeoutMs, readTimeoutMs);
-		return this.processResponseXml(respXml);
+		return this.processResponseXml(respXml,true);
 	}
 
 	
@@ -623,7 +629,7 @@ public class WXPay {
 		}
 		String respXml = this.requestWithCert(url,
 				this.fillTransfersRequestData(ReflectUtil.toMap(transfers)), connectTimeoutMs, readTimeoutMs);
-		return processResponseXml(respXml,TransfersResult.class);
+		return processResponseXml(respXml,TransfersResult.class,false);
 	}
 	
 	
@@ -668,7 +674,7 @@ public class WXPay {
 		}
 		String respXml = this.requestWithCert(url,
 				this.fillTransfersRequestData2(reqData), connectTimeoutMs, readTimeoutMs);
-		return processResponseXml(respXml,TransfersOrder.class);
+		return processResponseXml(respXml,TransfersOrder.class,false);
 	}
 
 	
