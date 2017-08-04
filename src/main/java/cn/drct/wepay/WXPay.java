@@ -10,6 +10,9 @@ import cn.drct.wepay.entity.RedpackOrder;
 import cn.drct.wepay.entity.RedpackResult;
 import cn.drct.wepay.entity.Refund;
 import cn.drct.wepay.entity.RefundResult;
+import cn.drct.wepay.entity.Transfers;
+import cn.drct.wepay.entity.TransfersOrder;
+import cn.drct.wepay.entity.TransfersResult;
 import cn.drct.wepay.entity.UnifiedOrder;
 import cn.drct.wepay.entity.UnifiedOrderResult;
 import cn.drct.wepay.exception.MsgException;
@@ -78,7 +81,7 @@ public class WXPay {
 	
 	
 	/**
-	 * 向 Map 中添加 wxappid、mch_id、nonce_str、sign_type、sign <br>
+	 * 向 Map 中添加 wxappid、mch_id、nonce_str、sign <br>
 	 * 该函数适用于商户适用于统一下单等接口，不适用于红包、代金券接口
 	 *
 	 * @param reqData
@@ -88,6 +91,43 @@ public class WXPay {
 	private Map<String, String> fillRedpackRequestData(Map<String, String> reqData)
 			throws MsgException, TradeException,MsgException,Exception {
 		reqData.put("wxappid", config.getAppID());
+		reqData.put("mch_id", config.getMchID());
+		reqData.put("nonce_str", WXPayUtil.generateNonceStr());
+		reqData.put("sign", WXPayUtil.generateSignature(reqData,
+				config.getKey(), config.getSignType()));
+		return reqData;
+	}
+	
+	
+	/**
+	 * 向 Map 中添加 mch_appid、mch_id、nonce_str、sign <br>
+	 * 该函数适用于商户适用于统一下单等接口，不适用于红包、代金券接口
+	 *
+	 * @param reqData
+	 * @return
+	 * @throws MsgException, TradeException,MsgException,Exception
+	 */
+	private Map<String, String> fillTransfersRequestData(Map<String, String> reqData)
+			throws MsgException, TradeException,MsgException,Exception {
+		reqData.put("mch_appid", config.getAppID());
+		reqData.put("mch_id", config.getMchID());
+		reqData.put("nonce_str", WXPayUtil.generateNonceStr());
+		reqData.put("sign", WXPayUtil.generateSignature(reqData,
+				config.getKey(), config.getSignType()));
+		return reqData;
+	}
+	
+	/**
+	 * 向 Map 中添加 appid、mch_id、nonce_str、sign <br>
+	 * 该函数适用于商户适用于统一下单等接口，不适用于红包、代金券接口
+	 *
+	 * @param reqData
+	 * @return
+	 * @throws MsgException, TradeException,MsgException,Exception
+	 */
+	private Map<String, String> fillTransfersRequestData2(Map<String, String> reqData)
+			throws MsgException, TradeException,MsgException,Exception {
+		reqData.put("appid", config.getAppID());
 		reqData.put("mch_id", config.getMchID());
 		reqData.put("nonce_str", WXPayUtil.generateNonceStr());
 		reqData.put("sign", WXPayUtil.generateSignature(reqData,
@@ -546,6 +586,92 @@ public class WXPay {
 	}
 
 	
+	
+	/**
+	 * 作用：企业支付<br>
+	 * 
+	 * @param transfers
+	 *            向wxpay post的请求数据
+	 * @return API返回数据
+	 * @throws MsgException, TradeException,MsgException,Exception
+	 */
+	public TransfersResult transfers(Transfers transfers)
+			throws MsgException, TradeException,MsgException,Exception {
+		return this.transfers(transfers, this.config.getHttpConnectTimeoutMs(),
+				this.config.getHttpReadTimeoutMs());
+	}
+	
+	/**
+	 * 作用：企业支付<br>
+	 * 
+	 * @param transfers
+	 *            向wxpay post的请求数据
+	 * @param connectTimeoutMs
+	 *            连接超时时间，单位是毫秒
+	 * @param readTimeoutMs
+	 *            读超时时间，单位是毫秒
+	 * @return API返回数据
+	 * @throws MsgException, TradeException,MsgException,Exception
+	 */
+	public TransfersResult transfers(Transfers transfers,
+			int connectTimeoutMs, int readTimeoutMs) throws MsgException, TradeException,MsgException,Exception {
+		String url;
+		if (config.isUseSandbox()) {
+			url = WXPayConstants.SANDBOX_TRANSFERS_URL;
+		} else {
+			url = WXPayConstants.TRANSFERS_URL;
+		}
+		String respXml = this.requestWithCert(url,
+				this.fillTransfersRequestData(ReflectUtil.toMap(transfers)), connectTimeoutMs, readTimeoutMs);
+		return processResponseXml(respXml,TransfersResult.class);
+	}
+	
+	
+	/**
+	 * 作用：查询企业支付<br>
+	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付
+	 * 
+	 * @param mchBillno
+	 *            向wxpay post的请求数据
+	 * @return API返回数据
+	 * @throws MsgException, TradeException,MsgException,Exception
+	 */
+	public TransfersOrder transfersQuery(String partnerTradeNo)
+			throws MsgException, TradeException,MsgException,Exception {
+		return this.transfersQuery(partnerTradeNo, this.config.getHttpConnectTimeoutMs(),
+				this.config.getHttpReadTimeoutMs());
+	}
+
+	/**
+	 * 作用：企业支付查询<br>
+	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付<br>
+	 * 其他：需要证书
+	 * 
+	 * @param partnerTradeNo
+	 *            向wxpay post的请求数据
+	 * @param connectTimeoutMs
+	 *            连接超时时间，单位是毫秒
+	 * @param readTimeoutMs
+	 *            读超时时间，单位是毫秒
+	 * @return API返回数据
+	 * @throws MsgException, TradeException,MsgException,Exception
+	 */
+	public TransfersOrder transfersQuery(String partnerTradeNo,
+			int connectTimeoutMs, int readTimeoutMs) throws MsgException, TradeException,MsgException,Exception {
+		String url;
+		Map<String, String> reqData = new HashMap<String, String>();
+		reqData.put("partner_trade_no", partnerTradeNo);
+		if (config.isUseSandbox()) {
+			url = WXPayConstants.SANDBOX_TRANSFERSQUERY_URL;
+		} else {
+			url = WXPayConstants.TRANSFERSQUERY_URL;
+		}
+		String respXml = this.requestWithCert(url,
+				this.fillTransfersRequestData2(reqData), connectTimeoutMs, readTimeoutMs);
+		return processResponseXml(respXml,TransfersOrder.class);
+	}
+
+	
 	/**
 	 * 作用：微信红包<br>
 	 * 场景：刷卡支付、公共号支付、扫码支付、APP支付
@@ -795,4 +921,4 @@ public class WXPay {
 		return WXPayUtil.generateSignature(reqData,config.getKey(), WXPayConstants.SignType.MD5);
 	}
 
-} // end class
+}

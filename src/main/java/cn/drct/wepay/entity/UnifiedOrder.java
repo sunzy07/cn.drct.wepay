@@ -129,14 +129,14 @@ public class UnifiedOrder {
 	public void setOutTradeNo(String outTradeNo) {
 		this.outTradeNo = outTradeNo;
 	}
-	public int getTotalFee() {
+	public Integer getTotalFee() {
 		return totalFee;
 	}
 	/**
 	 * 单位为分，>0
 	 * @param totalFee
 	 */
-	public void setTotalFee(int totalFee) {
+	public void setTotalFee(Integer totalFee) {
 		this.totalFee = totalFee;
 	}
 	public String getSpbillCreateIp() {

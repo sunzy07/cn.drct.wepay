@@ -165,7 +165,7 @@ public class Order {
 		this.attach = attach;
 	}
 	/**
-	 * 支付完成时间
+	 * 支付完成时间 格式为yyyyMMddHHmmss
 	 * @return
 	 */
 	public String getTimeEnd() {

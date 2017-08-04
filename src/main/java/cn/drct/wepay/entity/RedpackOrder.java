@@ -108,7 +108,7 @@ public class RedpackOrder {
 		this.reason = reason;
 	}
 	/**
-	 * 红包发送时间
+	 * 红包发送时间 2015-04-21 20:00:00
 	 * @return
 	 */
 	public String getSendTime() {
@@ -118,7 +118,7 @@ public class RedpackOrder {
 		this.sendTime = sendTime;
 	}
 	/**
-	 * 红包退款时间
+	 * 红包退款时间 2015-04-21 20:00:00
 	 * @return
 	 */
 	public String getRefundTime() {
@@ -128,7 +128,7 @@ public class RedpackOrder {
 		this.refundTime = refundTime;
 	}
 	/**
-	 * 红包退款金额
+	 * 红包退款金额 2015-04-21 20:00:00
 	 * @return
 	 */
 	public Integer getRefundAmount() {
